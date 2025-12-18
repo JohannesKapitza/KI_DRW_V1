@@ -37,9 +37,28 @@ function ANALYSE() {
       navigate('/');
       return;
     }
+    // Load files
     fetch(`http://localhost:3001/files?projectId=${selectedProject.id}`)
       .then(res => res.json())
       .then(setFiles);
+    
+    // Load saved Zeichnungskopf data
+    fetch(`http://localhost:3001/zeichnungskopf/${selectedProject.id}`)
+      .then(res => res.json())
+      .then(savedData => {
+        if (savedData) {
+          setZeichnungskopfData(prev => {
+            const updated = { ...prev };
+            for (const [key, value] of Object.entries(savedData)) {
+              if (key in updated && value && value !== '') {
+                updated[key] = value;
+              }
+            }
+            return updated;
+          });
+        }
+      })
+      .catch(err => console.error('Error loading Zeichnungskopf data:', err));
   }, [selectedProject, navigate]);
 
   if (!selectedProject) {
@@ -88,7 +107,7 @@ function ANALYSE() {
         }}>
           <h2 style={{ marginTop: 0, color: '#B31318' }}>Zeichnungsinformationen</h2>
           <p><strong>Name:</strong> {selectedProject.name}</p>
-          <p><strong>Verantwortlicher Mitarbeiter:</strong> {selectedProject.responsibleEmployee}</p>
+          <p><strong>Zeichnungsnummer:</strong> {selectedProject.zeichnungsnummer}</p>
           <p><strong>Bearbeitungsdatum:</strong> {new Date(selectedProject.editDate).toLocaleString()}</p>
         </div>
 
@@ -112,6 +131,7 @@ function ANALYSE() {
               <thead>
                 <tr style={{ backgroundColor: '#B31318', color: 'white' }}>
                   <th style={{ padding: '12px 15px', textAlign: 'left' }}>Dateiname</th>
+                  <th style={{ padding: '12px 15px', textAlign: 'left' }}>Klassifikation</th>
                 </tr>
               </thead>
               <tbody>
@@ -124,6 +144,7 @@ function ANALYSE() {
                     }}
                   >
                     <td style={{ padding: '12px 15px' }}>{f.name}</td>
+                    <td style={{ padding: '12px 15px' }}>{f.classification || '-'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -156,6 +177,83 @@ function ANALYSE() {
             <option value="Zeichnungskopf">Zeichnungskopf</option>
             <option value="Stückliste">Stückliste</option>
           </select>
+          <button
+            onClick={async () => {
+              if (files.length === 0) {
+                alert('Keine Dateien vorhanden. Bitte laden Sie zuerst Dateien hoch.');
+                return;
+              }
+              try {
+                const res = await fetch('http://localhost:3001/extract-titleblock', { 
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ projectId: selectedProject.id })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                  alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
+                  return;
+                }
+                if (data.success && data.data) {
+                  setZeichnungskopfData(prev => {
+                    const updated = { ...prev };
+                    for (const [key, value] of Object.entries(data.data)) {
+                      if (value && value.trim() !== '') {
+                        updated[key] = value;
+                      }
+                    }
+                    return updated;
+                  });
+                  const extractedFields = Object.entries(data.data).filter(([k, v]) => v && v.trim() !== '').length;
+                  alert(`Extraktion abgeschlossen. ${extractedFields} Felder gefunden.`);
+                } else {
+                  alert('Keine Daten gefunden. Stellen Sie sicher, dass die Zeichnungsnummer in den Excel-Dateien vorhanden ist.');
+                }
+              } catch (err) {
+                alert('Fehler beim Extrahieren: ' + err);
+              }
+            }}
+            style={{
+              padding: '10px 20px',
+              fontSize: '14px',
+              backgroundColor: '#B31318',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Start Extraction
+          </button>
+          <button
+            onClick={async () => {
+              try {
+                const res = await fetch(`http://localhost:3001/zeichnungskopf/${selectedProject.id}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(zeichnungskopfData)
+                });
+                if (res.ok) {
+                  alert('Zeichnungskopf Daten erfolgreich gespeichert!');
+                } else {
+                  alert('Fehler beim Speichern der Daten.');
+                }
+              } catch (err) {
+                alert('Fehler beim Speichern: ' + err);
+              }
+            }}
+            style={{
+              padding: '10px 20px',
+              fontSize: '14px',
+              backgroundColor: '#28a745',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Save Extracted Data
+          </button>
         </div>
       </div>
 

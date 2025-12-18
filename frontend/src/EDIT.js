@@ -6,6 +6,8 @@ function EDIT() {
   const location = useLocation();
   const navigate = useNavigate();
   const [selectedProject, setSelectedProject] = useState(location.state?.selectedProject || null);
+  const [editName, setEditName] = useState(location.state?.selectedProject?.name || '');
+  const [editZeichnungsnummer, setEditZeichnungsnummer] = useState(location.state?.selectedProject?.zeichnungsnummer || '');
   const [files, setFiles] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
   const [classification, setClassification] = useState('');
@@ -147,9 +149,71 @@ function EDIT() {
           boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
         }}>
           <h2 style={{ marginTop: 0, color: '#B31318' }}>Zeichnungsinformationen</h2>
-          <p><strong>Name:</strong> {selectedProject.name}</p>
-          <p><strong>Verantwortlicher Mitarbeiter:</strong> {selectedProject.responsibleEmployee}</p>
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Name:</label>
+            <input
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              style={{
+                padding: '10px 15px',
+                fontSize: '14px',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                width: '100%',
+                maxWidth: '400px'
+              }}
+            />
+          </div>
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Zeichnungsnummer:</label>
+            <input
+              type="text"
+              value={editZeichnungsnummer}
+              onChange={(e) => setEditZeichnungsnummer(e.target.value)}
+              style={{
+                padding: '10px 15px',
+                fontSize: '14px',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                width: '100%',
+                maxWidth: '400px'
+              }}
+            />
+          </div>
           <p><strong>Bearbeitungsdatum:</strong> {new Date(selectedProject.editDate).toLocaleString()}</p>
+          <button
+            onClick={async () => {
+              try {
+                const res = await fetch(`http://localhost:3001/projects/${selectedProject.id}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ name: editName, zeichnungsnummer: editZeichnungsnummer })
+                });
+                if (!res.ok) {
+                  throw new Error('Fehler beim Speichern');
+                }
+                const updatedProject = await res.json();
+                setSelectedProject(updatedProject);
+                alert('Zeichnungsinformationen gespeichert!');
+              } catch (err) {
+                alert('Fehler beim Speichern: ' + err.message);
+                console.error(err);
+              }
+            }}
+            style={{
+              padding: '10px 20px',
+              fontSize: '14px',
+              backgroundColor: '#B31318',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              marginTop: '10px'
+            }}
+          >
+            Speichern
+          </button>
         </div>
       </div>
 

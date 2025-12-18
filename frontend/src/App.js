@@ -4,7 +4,9 @@ import { useNavigate } from 'react-router-dom';
 function App() {
   const [projects, setProjects] = useState([]);
   const [projectName, setProjectName] = useState('');
+  const [zeichnungsnummer, setZeichnungsnummer] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [filesCounts, setFilesCounts] = useState({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -14,7 +16,17 @@ function App() {
   const fetchProjects = () => {
     fetch('http://localhost:3001/projects')
       .then(res => res.json())
-      .then(setProjects);
+      .then(data => {
+        setProjects(data);
+        // Fetch file counts for each project
+        data.forEach(project => {
+          fetch(`http://localhost:3001/files?projectId=${project.id}`)
+            .then(res => res.json())
+            .then(files => {
+              setFilesCounts(prev => ({ ...prev, [project.id]: files.length }));
+            });
+        });
+      });
   };
 
   const handleCreateProject = async () => {
@@ -25,11 +37,12 @@ function App() {
     const res = await fetch('http://localhost:3001/projects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: projectName })
+      body: JSON.stringify({ name: projectName, zeichnungsnummer })
     });
     const newProject = await res.json();
     setProjects([...projects, newProject]);
     setProjectName('');
+    setZeichnungsnummer('');
   };
 
   const handleDeleteProject = async (projectId) => {
@@ -46,7 +59,8 @@ function App() {
   };
 
   const filteredProjects = projects.filter(p =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase())
+    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.zeichnungsnummer && p.zeichnungsnummer.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -70,6 +84,19 @@ function App() {
             value={projectName}
             onChange={(e) => setProjectName(e.target.value)}
             placeholder="Zeichnungsname"
+            style={{
+              padding: '10px 15px',
+              fontSize: '14px',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              minWidth: '200px'
+            }}
+          />
+          <input
+            type="text"
+            value={zeichnungsnummer}
+            onChange={(e) => setZeichnungsnummer(e.target.value)}
+            placeholder="Zeichnungsnummer"
             style={{
               padding: '10px 15px',
               fontSize: '14px',
@@ -133,7 +160,8 @@ function App() {
           <thead>
             <tr style={{ backgroundColor: '#B31318', color: 'white' }}>
               <th style={{ padding: '12px 15px', textAlign: 'left' }}>Zeichnungsname</th>
-              <th style={{ padding: '12px 15px', textAlign: 'left' }}>Verantwortlicher Mitarbeiter</th>
+              <th style={{ padding: '12px 15px', textAlign: 'left' }}>Zeichnungsnummer</th>
+              <th style={{ padding: '12px 15px', textAlign: 'center' }}>Hochgeladene Dateien</th>
               <th style={{ padding: '12px 15px', textAlign: 'left' }}>Bearbeitungsdatum</th>
               <th style={{ padding: '12px 15px', textAlign: 'center' }}>Aktionen</th>
             </tr>
@@ -141,7 +169,7 @@ function App() {
           <tbody>
             {filteredProjects.length === 0 ? (
               <tr>
-                <td colSpan="4" style={{ padding: '20px', textAlign: 'center', color: '#7f8c8d' }}>
+                <td colSpan="5" style={{ padding: '20px', textAlign: 'center', color: '#7f8c8d' }}>
                   Keine Zeichnungen gefunden
                 </td>
               </tr>
@@ -155,7 +183,8 @@ function App() {
                   }}
                 >
                   <td style={{ padding: '12px 15px' }}>{p.name}</td>
-                  <td style={{ padding: '12px 15px' }}>{p.responsibleEmployee}</td>
+                  <td style={{ padding: '12px 15px' }}>{p.zeichnungsnummer || '-'}</td>
+                  <td style={{ padding: '12px 15px', textAlign: 'center' }}>{filesCounts[p.id] !== undefined ? filesCounts[p.id] : '...'}</td>
                   <td style={{ padding: '12px 15px' }}>{new Date(p.editDate).toLocaleString()}</td>
                   <td style={{ padding: '12px 15px', textAlign: 'center' }}>
                     <button 

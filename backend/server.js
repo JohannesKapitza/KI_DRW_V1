@@ -12,10 +12,12 @@ const UPLOAD_DIR = path.join(__dirname, 'uploads');
 const METADATA_FILE = path.join(__dirname, 'metadata.json');
 const ZEICHNUNG_FILE = path.join(__dirname, 'zeichnung.json');
 const DIN_FORMATS_FILE = path.join(__dirname, 'din-formats.json');
+const ZEICHNUNGSKOPF_FILE = path.join(__dirname, 'zeichnungskopf.json');
 
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR);
 if (!fs.existsSync(METADATA_FILE)) fs.writeFileSync(METADATA_FILE, '{}');
 if (!fs.existsSync(ZEICHNUNG_FILE)) fs.writeFileSync(ZEICHNUNG_FILE, '[]');
+if (!fs.existsSync(ZEICHNUNGSKOPF_FILE)) fs.writeFileSync(ZEICHNUNGSKOPF_FILE, '{}');
 if (!fs.existsSync(DIN_FORMATS_FILE)) {
   const defaultFormats = [
     { format: 'DIN A0', width: 841, height: 1189, containedInA0: '1x', name: 'Doppelbogen' },
@@ -39,6 +41,8 @@ const getZeichnungen = () => JSON.parse(fs.readFileSync(ZEICHNUNG_FILE, 'utf8'))
 const saveZeichnungen = (data) => fs.writeFileSync(ZEICHNUNG_FILE, JSON.stringify(data, null, 2));
 const getDinFormats = () => JSON.parse(fs.readFileSync(DIN_FORMATS_FILE, 'utf8'));
 const saveDinFormats = (data) => fs.writeFileSync(DIN_FORMATS_FILE, JSON.stringify(data, null, 2));
+const getZeichnungskopfData = () => JSON.parse(fs.readFileSync(ZEICHNUNGSKOPF_FILE, 'utf8'));
+const saveZeichnungskopfData = (data) => fs.writeFileSync(ZEICHNUNGSKOPF_FILE, JSON.stringify(data, null, 2));
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOAD_DIR),
@@ -52,6 +56,7 @@ app.post('/projects', (req, res) => {
   const newProject = {
     id: Date.now().toString(),
     name: req.body.name,
+    zeichnungsnummer: req.body.zeichnungsnummer || '',
     createdAt: new Date().toISOString(),
     editDate: new Date().toISOString()
   };
@@ -67,10 +72,49 @@ app.get('/projects', (req, res) => {
 
 // Delete project endpoint
 app.delete('/projects/:id', (req, res) => {
+  const projectId = req.params.id;
+  
+  // Delete all files associated with this project
+  const metadata = getMetadata();
+  const filesToDelete = Object.keys(metadata).filter(filename => metadata[filename].projectId === projectId);
+  
+  filesToDelete.forEach(filename => {
+    const filePath = path.join(UPLOAD_DIR, filename);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    delete metadata[filename];
+  });
+  saveMetadata(metadata);
+  
+  // Delete associated zeichnungskopf data
+  const zeichnungskopfData = getZeichnungskopfData();
+  delete zeichnungskopfData[projectId];
+  saveZeichnungskopfData(zeichnungskopfData);
+  
+  // Delete the project
   let zeichnungen = getZeichnungen();
-  zeichnungen = zeichnungen.filter(p => p.id !== req.params.id);
+  zeichnungen = zeichnungen.filter(p => p.id !== projectId);
   saveZeichnungen(zeichnungen);
-  res.json({ message: 'Project deleted' });
+  
+  res.json({ message: 'Project and associated files deleted', deletedFiles: filesToDelete.length });
+});
+
+// Update project endpoint
+app.put('/projects/:id', (req, res) => {
+  let zeichnungen = getZeichnungen();
+  const index = zeichnungen.findIndex(p => p.id === req.params.id);
+  if (index === -1) {
+    return res.status(404).json({ message: 'Project not found' });
+  }
+  zeichnungen[index] = {
+    ...zeichnungen[index],
+    name: req.body.name || zeichnungen[index].name,
+    zeichnungsnummer: req.body.zeichnungsnummer !== undefined ? req.body.zeichnungsnummer : zeichnungen[index].zeichnungsnummer,
+    editDate: new Date().toISOString()
+  };
+  saveZeichnungen(zeichnungen);
+  res.json(zeichnungen[index]);
 });
 
 // Upload endpoint
@@ -166,6 +210,83 @@ app.delete('/din-formats/:format', (req, res) => {
   formats = formats.filter(f => f.format !== req.params.format);
   saveDinFormats(formats);
   res.json({ message: 'Format deleted' });
+});
+
+
+// Zeichnungskopf endpoints
+app.get('/zeichnungskopf/:projectId', (req, res) => {
+  const data = getZeichnungskopfData();
+  const projectData = data[req.params.projectId] || null;
+  res.json(projectData);
+});
+
+app.put('/zeichnungskopf/:projectId', (req, res) => {
+  const data = getZeichnungskopfData();
+  data[req.params.projectId] = {
+    ...req.body,
+    updatedAt: new Date().toISOString()
+  };
+  saveZeichnungskopfData(data);
+  res.json(data[req.params.projectId]);
+});
+
+app.delete('/zeichnungskopf/:projectId', (req, res) => {
+  const data = getZeichnungskopfData();
+  delete data[req.params.projectId];
+  saveZeichnungskopfData(data);
+  res.json({ message: 'Zeichnungskopf data deleted' });
+});
+
+// Extraction endpoint: extract Zeichnungskopf data from Excel files
+const { exec } = require('child_process');
+const PYTHON_PATH = '"C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\Python39_64\\python.exe"';
+
+app.post('/extract-titleblock', (req, res) => {
+  const { projectId } = req.body;
+  
+  if (!projectId) {
+    return res.status(400).json({ error: 'projectId is required' });
+  }
+  
+  // Get the project to find the zeichnungsnummer
+  const zeichnungen = getZeichnungen();
+  const project = zeichnungen.find(p => p.id === projectId);
+  
+  if (!project) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  
+  const zeichnungsnummer = project.zeichnungsnummer || '';
+  
+  if (!zeichnungsnummer) {
+    return res.status(400).json({ error: 'Projekt hat keine Zeichnungsnummer. Bitte zuerst eine Zeichnungsnummer eingeben.' });
+  }
+  
+  // Run the Python extraction script
+  const command = `${PYTHON_PATH} extract_from_excel.py "${UPLOAD_DIR}" "${zeichnungsnummer}"`;
+  exec(command, { cwd: __dirname }, (error, stdout, stderr) => {
+    if (error) {
+      return res.status(500).json({ error: error.message, stderr });
+    }
+    try {
+      const result = JSON.parse(stdout);
+      
+      // Save extracted data to zeichnungskopf.json
+      if (result.success && result.data) {
+        const zeichnungskopfData = getZeichnungskopfData();
+        zeichnungskopfData[projectId] = {
+          ...result.data,
+          extractedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        saveZeichnungskopfData(zeichnungskopfData);
+      }
+      
+      res.json(result);
+    } catch (parseError) {
+      res.status(500).json({ error: 'Failed to parse extraction result', output: stdout, stderr });
+    }
+  });
 });
 
 app.listen(3001, () => console.log('Backend running on http://localhost:3001'));
