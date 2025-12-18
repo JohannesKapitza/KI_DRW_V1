@@ -1,0 +1,13 @@
+[
+  { "format": "DIN A0", "width": 841, "height": 1189, "containedInA0": "1x", "name": "Doppelbogen" },
+  { "format": "DIN A1", "width": 594, "height": 841, "containedInA0": "2x", "name": "Bogen" },
+  { "format": "DIN A2", "width": 420, "height": 594, "containedInA0": "4x", "name": "Halbbogen" },
+  { "format": "DIN A3", "width": 297, "height": 420, "containedInA0": "8x", "name": "Viertelbogen" },
+  { "format": "DIN A4", "width": 210, "height": 297, "containedInA0": "16x", "name": "Blatt (Briefbogen)" },
+  { "format": "DIN A5", "width": 148, "height": 210, "containedInA0": "32x", "name": "Halbblatt" },
+  { "format": "DIN A6", "width": 105, "height": 148, "containedInA0": "64x", "name": "Viertelblatt" },
+  { "format": "DIN A7", "width": 74, "height": 105, "containedInA0": "128x", "name": "Achtelblatt" },
+  { "format": "DIN A8", "width": 52, "height": 74, "containedInA0": "256x", "name": "Sechzehntelblatt" },
+  { "format": "DIN A9", "width": 37, "height": 52, "containedInA0": "512x", "name": "–" },
+  { "format": "DIN A10", "width": 26, "height": 37, "containedInA0": "1024x", "name": "–" }
+]
