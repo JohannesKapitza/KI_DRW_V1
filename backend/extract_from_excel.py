@@ -169,6 +169,10 @@ def extract_from_uploads(uploads_dir, zeichnungsnummer):
 
 
 if __name__ == '__main__':
+    # Set stdout encoding to UTF-8 for Windows compatibility
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    
     # Usage: python extract_from_excel.py <uploads_dir> <zeichnungsnummer>
     if len(sys.argv) < 3:
         print(json.dumps({

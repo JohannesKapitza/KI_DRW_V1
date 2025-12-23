@@ -5,5 +5,26 @@
     "createdAt": "2025-12-17T15:01:29.731Z",
     "editDate": "2025-12-18T09:01:11.093Z",
     "zeichnungsnummer": "111_222_333_00"
+  },
+  {
+    "id": "1766140562431",
+    "name": "neue TestZeichnung",
+    "zeichnungsnummer": "000_003_150_01",
+    "createdAt": "2025-12-19T10:36:02.431Z",
+    "editDate": "2025-12-19T10:36:02.431Z"
+  },
+  {
+    "id": "1766140767020",
+    "name": "gagasd",
+    "zeichnungsnummer": "002_005_105_01",
+    "createdAt": "2025-12-19T10:39:27.020Z",
+    "editDate": "2025-12-19T10:39:27.020Z"
+  },
+  {
+    "id": "1766410677967",
+    "name": "dfafda",
+    "zeichnungsnummer": "fdafas",
+    "createdAt": "2025-12-22T13:37:57.967Z",
+    "editDate": "2025-12-22T13:37:57.967Z"
   }
 ]

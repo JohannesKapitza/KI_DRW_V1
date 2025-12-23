@@ -245,7 +245,7 @@ function ANALYSE() {
             style={{
               padding: '10px 20px',
               fontSize: '14px',
-              backgroundColor: '#28a745',
+              backgroundColor: '#B31318',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -253,6 +253,23 @@ function ANALYSE() {
             }}
           >
             Save Extracted Data
+          </button>
+          <button
+            onClick={() => {
+              // TODO: Implement PDF creation
+              alert('PDF Erstellung wird implementiert...');
+            }}
+            style={{
+              padding: '10px 20px',
+              fontSize: '14px',
+              backgroundColor: '#B31318',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Create PDF
           </button>
         </div>
       </div>
@@ -274,37 +291,73 @@ function ANALYSE() {
           }}>
             <thead>
               <tr style={{ backgroundColor: '#B31318', color: 'white' }}>
-                <th style={{ padding: '12px 15px', textAlign: 'left' }}>Feldname</th>
-                <th style={{ padding: '12px 15px', textAlign: 'left' }}>Wert</th>
+                <th style={{ padding: '12px 15px', textAlign: 'left', width: '15%' }}>Feldname</th>
+                <th style={{ padding: '12px 15px', textAlign: 'left', width: '35%' }}>Wert</th>
+                <th style={{ padding: '12px 15px', textAlign: 'left', width: '15%' }}>Feldname</th>
+                <th style={{ padding: '12px 15px', textAlign: 'left', width: '35%' }}>Wert</th>
               </tr>
             </thead>
             <tbody>
-              {Object.keys(zeichnungskopfData).map((fieldName, index) => (
-                <tr 
-                  key={fieldName}
-                  style={{ 
-                    backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
-                    borderBottom: '1px solid #eee'
-                  }}
-                >
-                  <td style={{ padding: '12px 15px', fontWeight: '500' }}>{fieldName}</td>
-                  <td style={{ padding: '12px 15px' }}>
-                    <input
-                      type="text"
-                      value={zeichnungskopfData[fieldName]}
-                      onChange={(e) => handleZeichnungskopfChange(fieldName, e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '8px 12px',
-                        fontSize: '14px',
-                        border: '1px solid #ddd',
-                        borderRadius: '4px',
-                        boxSizing: 'border-box'
+              {(() => {
+                const fields = Object.keys(zeichnungskopfData);
+                const rows = [];
+                for (let i = 0; i < fields.length; i += 2) {
+                  const field1 = fields[i];
+                  const field2 = fields[i + 1];
+                  rows.push(
+                    <tr 
+                      key={field1}
+                      style={{ 
+                        backgroundColor: (i / 2) % 2 === 0 ? '#f8f9fa' : 'white',
+                        borderBottom: '1px solid #eee'
                       }}
-                    />
-                  </td>
-                </tr>
-              ))}
+                    >
+                      <td style={{ padding: '12px 15px', fontWeight: '500' }}>{field1}</td>
+                      <td style={{ padding: '12px 15px' }}>
+                        <input
+                          type="text"
+                          value={zeichnungskopfData[field1]}
+                          onChange={(e) => handleZeichnungskopfChange(field1, e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            fontSize: '14px',
+                            border: '1px solid #ddd',
+                            borderRadius: '4px',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                      </td>
+                      {field2 ? (
+                        <>
+                          <td style={{ padding: '12px 15px', fontWeight: '500' }}>{field2}</td>
+                          <td style={{ padding: '12px 15px' }}>
+                            <input
+                              type="text"
+                              value={zeichnungskopfData[field2]}
+                              onChange={(e) => handleZeichnungskopfChange(field2, e.target.value)}
+                              style={{
+                                width: '100%',
+                                padding: '8px 12px',
+                                fontSize: '14px',
+                                border: '1px solid #ddd',
+                                borderRadius: '4px',
+                                boxSizing: 'border-box'
+                              }}
+                            />
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td style={{ padding: '12px 15px' }}></td>
+                          <td style={{ padding: '12px 15px' }}></td>
+                        </>
+                      )}
+                    </tr>
+                  );
+                }
+                return rows;
+              })()}
             </tbody>
           </table>
         </div>
